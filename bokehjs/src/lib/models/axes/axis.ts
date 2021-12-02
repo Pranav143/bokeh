@@ -15,7 +15,7 @@ import {Context2d} from "core/util/canvas"
 import {sum} from "core/util/array"
 import {entries} from "core/util/object"
 import {isNumber} from "core/util/types"
-import {GraphicsBox, GraphicsBoxes, TextBox} from "core/graphics"
+import {GraphicsBoxes, TextBox} from "core/graphics"
 import {Factor, FactorRange} from "models/ranges/factor_range"
 import {BaseTextView} from "../text/base_text"
 import {BaseText} from "../text/base_text"
@@ -23,7 +23,6 @@ import {build_view} from "core/build_views"
 import {unreachable} from "core/util/assert"
 import {isString} from "core/util/types"
 import {parse_delimited_string} from "models/text/utils"
-import {is_math_box} from "core/math_graphics"
 
 const {abs} = Math
 
@@ -48,6 +47,7 @@ export class AxisView extends GuideRendererView {
   panel: Panel
   layout: Layoutable
 
+  /*private*/ _axis_label_view: BaseTextView | null = null
   /*private*/ _major_label_views: Map<string, BaseTextView> = new Map()
 
   override async lazy_initialize(): Promise<void> {
@@ -57,19 +57,14 @@ export class AxisView extends GuideRendererView {
     await this._init_major_labels()
   }
 
-  get axis_label_graphics(): GraphicsBox | null {
+  protected async _init_axis_label(): Promise<void> {
     const {axis_label} = this.model
 
     if (axis_label == null)
-      return null
+      return
 
     const _axis_label = isString(axis_label) ? parse_delimited_string(axis_label) : axis_label
-    return _axis_label.graphics()
-  }
-
-  protected async _init_axis_label(): Promise<void> {
-    if (this.axis_label_graphics != null && is_math_box(this.axis_label_graphics))
-      await this.axis_label_graphics.load_provider()
+    this._axis_label_view = await build_view(_axis_label, {parent: this})
   }
 
   protected async _init_major_labels(): Promise<void> {
@@ -122,12 +117,13 @@ export class AxisView extends GuideRendererView {
   override connect_signals(): void {
     super.connect_signals()
 
-    const {major_label_overrides} = this.model.properties
+    const {major_label_overrides, axis_label} = this.model.properties
+
+    this.on_change(axis_label, async () => {
+      await this._init_axis_label()
+    })
 
     this.on_change(major_label_overrides, async () => {
-      for (const label_view of this._major_label_views.values()) {
-        label_view.remove()
-      }
       await this._init_major_labels()
     })
 
@@ -187,7 +183,7 @@ export class AxisView extends GuideRendererView {
   }
 
   protected _axis_label_extent(): number {
-    const axis_label_graphics = this.axis_label_graphics
+    const axis_label_graphics = this._axis_label_view?.graphics()
     if (axis_label_graphics == null)
       return 0
 
@@ -207,7 +203,7 @@ export class AxisView extends GuideRendererView {
   }
 
   protected _draw_axis_label(ctx: Context2d, extents: Extents, _tick_coords: TickCoords): void {
-    const axis_label_graphics = this.axis_label_graphics
+    const axis_label_graphics = this._axis_label_view?.graphics()
     if (axis_label_graphics == null || this.model.fixed_location != null)
       return
 
@@ -606,23 +602,13 @@ export class AxisView extends GuideRendererView {
   }
 
   override remove(): void {
+    this._axis_label_view?.remove()
+
     for (const label_view of this._major_label_views.values()) {
       label_view.remove()
     }
 
     super.remove()
-  }
-
-  override has_finished(): boolean {
-    if (!super.has_finished())
-      return false
-
-    for (const label_view of this._major_label_views.values()) {
-      if (!label_view.has_finished())
-        return false
-    }
-
-    return true
   }
 }
 
