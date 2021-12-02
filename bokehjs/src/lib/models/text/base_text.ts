@@ -1,6 +1,6 @@
 import {Model} from "../../model"
 import {View} from "core/view"
-import {GraphicsBox, TextBox} from "core/graphics"
+import {GraphicsBox} from "core/graphics"
 import * as p from "core/properties"
 import {RendererView} from "models/renderers/renderer"
 
@@ -24,10 +24,6 @@ export interface BaseText extends BaseText.Attrs {}
 export class BaseText extends Model {
   override properties: BaseText.Props
   override __view_type__: BaseTextView
-
-  graphics(): GraphicsBox {
-    return new TextBox(this)
-  }
 
   constructor(attrs?: Partial<BaseText.Attrs>) {
     super(attrs)

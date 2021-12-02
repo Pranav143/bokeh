@@ -5,11 +5,6 @@ import * as p from "core/properties"
 export class PlainTextView extends BaseTextView {
   override model: PlainText
 
-  override initialize(): void {
-    super.initialize()
-    this._has_finished = true
-  }
-
   graphics(): GraphicsBox {
     return new TextBox({text: this.model.text})
   }

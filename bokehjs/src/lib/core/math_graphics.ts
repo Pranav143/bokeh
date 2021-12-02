@@ -271,7 +271,7 @@ export class MathMLBox extends MathBox {
     }
     const fmetrics = font_metrics(this.font)
 
-    return this.provider.MathJax?.mathml2svg(this.styled_formula, {
+    return this.provider.MathJax.mathml2svg(this.styled_formula, {
       em: this.base_font_size,
       ex: fmetrics.x_height,
     }).children[0] as SVGElement
